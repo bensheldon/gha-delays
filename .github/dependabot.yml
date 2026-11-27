@@ -1,0 +1,81 @@
+# Dependabot schedule probes for the delay experiment.
+# Each entry watches a dummy composite action; all updates are ignored so no PRs open.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /dependabot/daily-0000
+    schedule:
+      interval: "daily"
+      time: "00:00"
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: github-actions
+    directory: /dependabot/daily-0017
+    schedule:
+      interval: "daily"
+      time: "00:17"
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: github-actions
+    directory: /dependabot/daily-0055
+    schedule:
+      interval: "daily"
+      time: "00:55"
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: github-actions
+    directory: /dependabot/daily-0900
+    schedule:
+      interval: "daily"
+      time: "09:00"
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: github-actions
+    directory: /dependabot/daily-0917
+    schedule:
+      interval: "daily"
+      time: "09:17"
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: github-actions
+    directory: /dependabot/daily-0955
+    schedule:
+      interval: "daily"
+      time: "09:55"
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: github-actions
+    directory: /dependabot/daily-1530
+    schedule:
+      interval: "daily"
+      time: "15:30"
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: github-actions
+    directory: /dependabot/daily-default
+    schedule:
+      interval: "daily"
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: github-actions
+    directory: /dependabot/daily-tz-ny-0400
+    schedule:
+      interval: "daily"
+      time: "04:00"
+      timezone: "America/New_York"
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: github-actions
+    directory: /dependabot/cron-hourly-17
+    schedule:
+      interval: "cron"
+      cronjob: "17 * * * *"
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: github-actions
+    directory: /dependabot/cron-hourly-55
+    schedule:
+      interval: "cron"
+      cronjob: "55 * * * *"
+    ignore:
+      - dependency-name: "*"

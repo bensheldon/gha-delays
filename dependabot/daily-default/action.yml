@@ -1,0 +1,6 @@
+name: daily-default
+description: Dependabot schedule probe
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4

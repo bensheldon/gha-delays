@@ -66,16 +66,16 @@ updates:
     ignore:
       - dependency-name: "*"
   - package-ecosystem: github-actions
-    directory: /dependabot/cron-hourly-17
+    directory: /dependabot/cron-daily-0917
     schedule:
       interval: "cron"
-      cronjob: "17 * * * *"
+      cronjob: "17 9 * * *"
     ignore:
       - dependency-name: "*"
   - package-ecosystem: github-actions
-    directory: /dependabot/cron-hourly-55
+    directory: /dependabot/cron-daily-0955
     schedule:
       interval: "cron"
-      cronjob: "55 * * * *"
+      cronjob: "55 9 * * *"
     ignore:
       - dependency-name: "*"

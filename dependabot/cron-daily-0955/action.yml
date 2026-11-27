@@ -1,4 +1,4 @@
-name: cron-hourly-17
+name: cron-daily-0955
 description: Dependabot schedule probe
 runs:
   using: composite

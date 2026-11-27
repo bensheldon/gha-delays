@@ -1,4 +1,4 @@
-# Dependabot schedule probes for the delay experiment (see README).
+# Dependabot schedule probes for the delay experiment.
 # Each entry watches a dummy composite action; all updates are ignored so no PRs open.
 version: 2
 updates:

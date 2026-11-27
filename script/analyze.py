@@ -14,6 +14,10 @@ from generate import VARIANTS
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CACHE = ROOT / "data" / "raw_runs.json"
+START_DATE = datetime(2026, 11, 23).date()  # experiment start
+# Delays are unreliable when they can exceed the interval (a late run gets
+# attributed to the next slot), so short-interval workflows are excluded.
+MIN_INTERVAL = 30
 NAMES = {"JAN":1,"FEB":2,"MAR":3,"APR":4,"MAY":5,"JUN":6,"JUL":7,"AUG":8,"SEP":9,"OCT":10,"NOV":11,"DEC":12,
          "SUN":0,"MON":1,"TUE":2,"WED":3,"THU":4,"FRI":5,"SAT":6}
 
@@ -52,12 +56,34 @@ def intended(schedules, created):
     return best.astimezone(timezone.utc) if best else None
 
 def fetch():
-    out = subprocess.check_output(["gh", "api", "--paginate",
-        "repos/{owner}/{repo}/actions/runs?event=schedule&per_page=100",
-        "--jq", ".workflow_runs[] | {name, created_at, run_started_at, id}"], cwd=ROOT, text=True)
-    runs = [json.loads(l) for l in out.splitlines() if l]
+    """Fetch per workflow, per UTC day, to stay under the API's 1000-result cap per query."""
+    runs = []
+    today = datetime.now(timezone.utc).date()
+    for name, _ in VARIANTS:
+        day = START_DATE
+        while day <= today:
+            out = subprocess.check_output(["gh", "api", "--paginate",
+                f"repos/{{owner}}/{{repo}}/actions/workflows/{name}.yml/runs?event=schedule&per_page=100&created={day}",
+                "--jq", ".workflow_runs[] | {name, created_at, run_started_at, id}"], cwd=ROOT, text=True)
+            runs += [json.loads(l) for l in out.splitlines() if l]
+            day += timedelta(days=1)
     CACHE.parent.mkdir(exist_ok=True); CACHE.write_text(json.dumps(runs))
     return runs
+
+def slots(schedules, start, end):
+    """All intended UTC minutes in [start, end] across schedules."""
+    out, t = [], start.replace(second=0, microsecond=0)
+    while t <= end:
+        if any(matches(s["cron"], t.astimezone(ZoneInfo(s.get("timezone", "UTC")))) for s in schedules):
+            out.append(t)
+        t += timedelta(minutes=1)
+    return out
+
+def interval(schedules):
+    """Smallest gap in minutes between scheduled slots over one day."""
+    base = datetime(2026, 1, 5, tzinfo=timezone.utc)
+    ss = slots(schedules, base, base + timedelta(days=1))
+    return min((b - a).total_seconds() / 60 for a, b in zip(ss, ss[1:]))
 
 def pct(xs, p):
     xs = sorted(xs); return xs[min(len(xs) - 1, int(p * len(xs)))]
@@ -78,18 +104,37 @@ def main():
         if not it: continue
         rows.append({"workflow": r["name"], "intended": it.isoformat(), "created_at": r["created_at"],
                      "delay_min": round((created - it).total_seconds() / 60, 2)})
+    rows.sort(key=lambda r: (r["workflow"], r["intended"]))
+    (ROOT / "data").mkdir(exist_ok=True)
     with open(ROOT / "data" / "runs.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["workflow", "intended", "created_at", "delay_min"])
         w.writeheader(); w.writerows(rows)
 
+    # Dropped runs: expected slots from each workflow's first run until 1h before the last
+    # observed run anywhere (so still-pending runs aren't counted as dropped).
+    last = max(datetime.fromisoformat(r["created_at"].replace("Z", "+00:00")) for r in rows) - timedelta(hours=1)
+    by_wf_rows = defaultdict(list)
+    for r in rows: by_wf_rows[r["workflow"]].append(r)
+    print(f"\n## Coverage (through {last:%Y-%m-%d %H:%M} UTC)")
+    print(f"{'workflow':<24}{'interval':>9}{'expected':>9}{'ran':>6}{'dropped':>9}")
+    for name, schedules in VARIANTS:
+        rs = by_wf_rows.get(name, [])
+        if not rs: print(f"{name:<24}{'':>9}{'':>9}{0:>6}{'(no runs)':>9}"); continue
+        first = datetime.fromisoformat(rs[0]["intended"])
+        exp = set(slots(schedules, first, last))
+        got = {datetime.fromisoformat(r["intended"]) for r in rs} & exp
+        print(f"{name:<24}{interval(schedules):>9.0f}{len(exp):>9}{len(got):>6}{1 - len(got)/max(len(exp),1):>9.0%}")
+
     by_wf, by_hour, by_min = defaultdict(list), defaultdict(list), defaultdict(list)
-    for r in rows:
-        by_wf[r["workflow"]].append(r["delay_min"])
-        if r["workflow"].startswith("minute-"):
-            t = datetime.fromisoformat(r["intended"])
-            by_hour[f"{t.hour:02d}h UTC"].append(r["delay_min"])
-            by_min[f":{t.minute:02d}"].append(r["delay_min"])
-    table("By workflow", by_wf)
+    for name, schedules in VARIANTS:
+        if interval(schedules) < MIN_INTERVAL: continue
+        for r in by_wf_rows.get(name, []):
+            by_wf[name].append(r["delay_min"])
+            if name.startswith("minute-"):
+                t = datetime.fromisoformat(r["intended"])
+                by_hour[f"{t.hour:02d}h UTC"].append(r["delay_min"])
+                by_min[f":{t.minute:02d}"].append(r["delay_min"])
+    table(f"Delay by workflow (interval >= {MIN_INTERVAL} min)", by_wf)
     table("Minute sweep by UTC hour", by_hour)
     table("Minute sweep by minute", by_min)
 

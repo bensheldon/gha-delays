@@ -35,6 +35,10 @@ VARIANTS += [
     ("fmt-tz-new-york",        [{"cron": "17 * * * *", "timezone": "America/New_York"}]),
     ("fmt-tz-kolkata",         [{"cron": "17 * * * *", "timezone": "Asia/Kolkata"}]),  # +05:30: fires at :47 UTC
     ("fmt-tz-kolkata-00",      [{"cron": "0 * * * *", "timezone": "Asia/Kolkata"}]),   # local :00 = :30 UTC
+    # Added 2026-11-27: is the stable per-workflow offset from the cron text or the workflow itself?
+    ("fmt-copy-minute-17",     [{"cron": "17 * * * *"}]),  # identical to minute-17
+    ("fmt-hour-list-all",      [{"cron": "17 " + ",".join(str(h) for h in range(24)) + " * * *"}]),
+    ("fmt-minute-list-all",    [{"cron": ",".join(str(m) for m in range(60)) + " * * * *"}]),
     ("fmt-tz-kathmandu",       [{"cron": "17 * * * *", "timezone": "Asia/Kathmandu"}]),  # +05:45
 ]
 
